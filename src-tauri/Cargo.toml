@@ -1,0 +1,28 @@
+[package]
+name = "tweakfivem"
+version = "5.0.0"
+description = "TweakFiveM - FiveM GTA V utility tool for True Stretch and FPS tweaks"
+authors = ["LuckWW"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-log = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+tokio = { version = "1", features = ["full"] }
+winreg = "0.55"
+sysinfo = "0.35"
+windows = { version = "0.58", features = ["Win32_System_Threading", "Win32_Foundation"] }
