@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { invoke } from '@tauri-apps/api/core';
 import { t, type Lang } from './i18n';
 import {
   applyNvidiaProfile,
@@ -153,6 +154,7 @@ export default function App() {
   const [launching, setLaunching] = useState(false);
   const [pathValid, setPathValid] = useState(false);
   const [gpuInfo, setGpuInfo] = useState<GpuInfo | null>(null);
+  const [cpuInfo, setCpuInfo] = useState<string>('Detecting...');
   const [gpuCategory, setGpuCategory] = useState('unknown');
   const [resolutions, setResolutions] = useState<[string, string, string][]>([]);
   const [selectedRes, setSelectedRes] = useState('1440x1080');
@@ -208,14 +210,16 @@ export default function App() {
         setAutoPriority(cfg.auto_priority || false);
         setAutoAffinity(cfg.auto_affinity || false);
 
-        const [path, gpu, res] = await Promise.all([
+        const [path, gpu, res, cpu] = await Promise.all([
           checkFivemPath(cfg.game_path),
           getGpuInfo(),
           getResolutions(),
+          invoke<string>('get_cpu_info')
         ]);
 
         setPathValid(path.success);
         setGpuInfo(gpu);
+        setCpuInfo(cpu);
         setGpuCategory(cfg.gpu_override && cfg.gpu_override !== 'auto' ? cfg.gpu_override : gpu.category);
         setResolutions(res);
       } catch (error) {
@@ -283,18 +287,6 @@ export default function App() {
     await updateConfigField('language', nextLang);
   };
 
-  const handleBrowseFolder = async () => {
-    try {
-      const { open } = await import('@tauri-apps/plugin-dialog');
-      const selected = await open({ directory: true, title: 'Select FiveM Folder' });
-      if (selected && typeof selected === 'string') {
-        setConfig((prev) => (prev ? { ...prev, game_path: selected } : prev));
-        await persistGamePath(selected);
-      }
-    } catch (error) {
-      addLog(`Browse error: ${String(error)}`);
-    }
-  };
 
   const handleBrowseFiveM = async () => {
     try {
@@ -535,6 +527,10 @@ export default function App() {
                   <p className="section-caption">{t(lang, 'summaryGpu')}</p>
                   <p className="mt-2 break-words text-sm font-medium text-zinc-950">{gpuNames}</p>
                 </div>
+                <div className="rounded-2xl border border-zinc-200/70 bg-zinc-50 p-4">
+                  <p className="section-caption">CPU</p>
+                  <p className="mt-2 break-words text-sm font-medium text-zinc-950">{cpuInfo}</p>
+                </div>
               </div>
             </div>
           </motion.header>
@@ -558,10 +554,9 @@ export default function App() {
             <p className="text-sm text-zinc-500">{t(lang, 'safeModeDesc')}</p>
           </div>
 
-          <div className="grid items-start gap-4 lg:grid-cols-2">
-            {/* ── Left Column ── */}
-            <div className="flex flex-col gap-4">
-              <motion.div {...fadeIn} transition={{ delay: 0.08, duration: 0.24 }}>
+          <div className="grid items-start gap-6 lg:grid-cols-2">
+            <div className="flex flex-col gap-6">
+<motion.div {...fadeIn} transition={{ delay: 0.08, duration: 0.24 }}>
                 <SectionCard title={t(lang, 'gameFolderTitle')} description={t(lang, 'gameFolderDesc')}>
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-3 sm:flex-row">
@@ -595,8 +590,7 @@ export default function App() {
                   </div>
                 </SectionCard>
               </motion.div>
-
-              <motion.div {...fadeIn} transition={{ delay: 0.12, duration: 0.24 }}>
+<motion.div {...fadeIn} transition={{ delay: 0.12, duration: 0.24 }}>
                 <SectionCard title={t(lang, 'stretchTitle')} description={t(lang, 'stretchDesc')}>
                   <div className={`space-y-4 ${isNvidiaDisabled ? 'opacity-60' : ''}`}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -686,8 +680,9 @@ export default function App() {
                   </div>
                 </SectionCard>
               </motion.div>
-
-              <motion.div {...fadeIn} transition={{ delay: 0.16, duration: 0.24 }}>
+            </div>
+            <div className="flex flex-col gap-6">
+<motion.div {...fadeIn} transition={{ delay: 0.16, duration: 0.24 }}>
                 <SectionCard title={t(lang, 'systemTitle')} description={t(lang, 'systemDesc')}>
                   <div className="flex flex-col gap-6">
                     <ToggleRow
@@ -733,46 +728,7 @@ export default function App() {
                   </div>
                 </SectionCard>
               </motion.div>
-            </div>
-
-            {/* ── Right Column ── */}
-            <div className="flex flex-col gap-4">
-              <motion.div {...fadeIn} transition={{ delay: 0.08, duration: 0.24 }}>
-                <SectionCard title={t(lang, 'launchTitle')} description={t(lang, 'launchDesc')}>
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap gap-2">
-                      {stretchLinked && <StatusBadge tone="accent" label={t(lang, 'stretchLinkedBadge')} />}
-                      {nvidiaLinked && <StatusBadge tone="accent" label={t(lang, 'nvidiaLinkedBadge')} />}
-                      {!stretchLinked && !nvidiaLinked && (
-                        <StatusBadge tone="neutral" label={t(lang, 'launchManualBadge')} />
-                      )}
-                    </div>
-
-                    <button className="primary-button w-full" disabled={launching} onClick={handleLaunch}>
-                      {launching ? t(lang, 'launching') : t(lang, 'play')}
-                    </button>
-                  </div>
-                </SectionCard>
-              </motion.div>
-
-              <motion.div {...fadeIn} transition={{ delay: 0.12, duration: 0.24 }}>
-                <SectionCard title={t(lang, 'logTitle')} description={t(lang, 'logDesc')}>
-                  <div ref={logRef} className="log-surface h-40 overflow-y-auto">
-                    {logs.length === 0 ? (
-                      <p className="text-zinc-400">{t(lang, 'logEmpty')}</p>
-                    ) : (
-                      logs.map((entry, index) => (
-                        <p key={`${entry.time}-${index}`} className={`text-sm leading-6 ${getLogColor(entry.msg)}`}>
-                          <span className="mr-1.5 opacity-60 text-zinc-400 font-normal">[{entry.time}]</span>
-                          <span>{entry.msg}</span>
-                        </p>
-                      ))
-                    )}
-                  </div>
-                </SectionCard>
-              </motion.div>
-
-              <motion.div {...fadeIn} transition={{ delay: 0.16, duration: 0.24 }}>
+<motion.div {...fadeIn} transition={{ delay: 0.16, duration: 0.24 }}>
                 <SectionCard title={t(lang, 'nvidiaTitle')} description={t(lang, 'nvidiaDesc')}>
                   <div className={`space-y-4 ${isNvidiaDisabled ? 'opacity-60' : ''}`}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -829,11 +785,10 @@ export default function App() {
                   </div>
                 </SectionCard>
               </motion.div>
-
             </div>
           </div>
 
-          {/* Removed Advanced Mode section */}
+                    {/* Removed Advanced Mode section */}
 
           <motion.p
             {...fadeIn}
@@ -843,6 +798,38 @@ export default function App() {
             {t(lang, 'disclaimer')}
           </motion.p>
         </div>
+      <div className="app-footer">
+        <div className="mx-auto flex w-full max-w-[1000px] items-center gap-6">
+          <div className="flex-1">
+            <div className="text-xs font-semibold text-zinc-500 mb-2">{t(lang, 'logTitle')}</div>
+            <div ref={logRef} className="log-surface h-24 overflow-y-auto">
+                    {logs.length === 0 ? (
+                      <p className="text-zinc-400">{t(lang, 'logEmpty')}</p>
+                    ) : (
+                      logs.map((entry, index) => (
+                        <p key={`${entry.time}-${index}`} className={`text-sm leading-6 ${getLogColor(entry.msg)}`}>
+                          <span className="mr-1.5 opacity-60 text-zinc-400 font-normal">[{entry.time}]</span>
+                          <span>{entry.msg}</span>
+                        </p>
+                      ))
+                    )}
+                  </div>
+          </div>
+          <div className="flex w-64 shrink-0 flex-col items-end gap-3">
+            <div className="flex flex-wrap gap-2">
+                      {stretchLinked && <StatusBadge tone="accent" label={t(lang, 'stretchLinkedBadge')} />}
+                      {nvidiaLinked && <StatusBadge tone="accent" label={t(lang, 'nvidiaLinkedBadge')} />}
+                      {!stretchLinked && !nvidiaLinked && (
+                        <StatusBadge tone="neutral" label={t(lang, 'launchManualBadge')} />
+                      )}
+                    </div>
+            <button className="primary-button w-full text-lg py-4 shadow-lg shadow-zinc-900/10" disabled={launching} onClick={handleLaunch}>
+              {launching ? t(lang, 'launching') : t(lang, 'play')}
+            </button>
+          </div>
+        </div>
+      </div>
+
       </div>
 
       <AnimatePresence>

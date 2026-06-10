@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "TweakFiveM",
-        "width": 540,
-        "height": 860,
+        "width": 1024,
+        "height": 768,
         "minWidth": 480,
         "minHeight": 700,
         "resizable": true,

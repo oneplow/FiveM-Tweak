@@ -44,6 +44,7 @@ pub fn run() {
             // System Optimizer (Timer & Memory)
             system_optimizer::set_timer_resolution,
             system_optimizer::purge_standby_list,
+            system_optimizer::get_cpu_info,
         ])
         .setup(|app| {
             process_director::spawn_director_thread();

@@ -91,3 +91,18 @@ pub fn purge_standby_list() -> Result<(), String> {
         Err(e) => Err(format!("Failed to run empty standby command: {}", e)),
     }
 }
+
+#[tauri::command]
+pub fn get_cpu_info() -> String {
+    use sysinfo::{System, CpuRefreshKind, RefreshKind};
+    let mut sys = System::new_with_specifics(
+        RefreshKind::nothing().with_cpu(CpuRefreshKind::everything()),
+    );
+    sys.refresh_cpu_all();
+    
+    if let Some(cpu) = sys.cpus().first() {
+        cpu.brand().trim().to_string()
+    } else {
+        "Unknown CPU".to_string()
+    }
+}
