@@ -4,7 +4,7 @@ use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const SKIP_FOLDERS: &[&str] = &["CrashReportClient", "WindowsClient"];
+
 
 #[derive(Debug, Clone, Serialize)]
 pub struct StretchResult {

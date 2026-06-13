@@ -1,6 +1,6 @@
-# TweakFiveM
+# FiveMTweak
 
-TweakFiveM is an advanced configuration utility designed specifically for FiveM (GTA V) players. Built as a high-performance desktop application using **Tauri v2** and **React**, it provides an all-in-one window to manage graphics settings, apply True Stretch resolutions, and tweak NVIDIA driver profiles to optimize game performance and visibility.
+FiveMTweak is an advanced configuration utility designed specifically for FiveM (GTA V) players. Built as a high-performance desktop application using **Tauri v2** and **React**, it provides an all-in-one window to manage graphics settings, apply True Stretch resolutions, and tweak NVIDIA driver profiles to optimize game performance and visibility.
 
 ---
 

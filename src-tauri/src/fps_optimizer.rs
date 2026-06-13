@@ -212,7 +212,7 @@ fn create_restore_point() -> OptResult {
         .args([
             "-NoProfile",
             "-Command",
-            r#"Checkpoint-Computer -Description "TweakFiveM FPS Optimization" -RestorePointType "MODIFY_SETTINGS""#,
+            r#"Checkpoint-Computer -Description "FiveMTweak FPS Optimization" -RestorePointType "MODIFY_SETTINGS""#,
         ])
         .creation_flags(0x08000000)
         .output();

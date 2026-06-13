@@ -1,7 +1,7 @@
 [package]
-name = "tweakfivem"
+name = "fivemtweak"
 version = "5.0.0"
-description = "TweakFiveM - FiveM GTA V utility tool for True Stretch and FPS tweaks"
+description = "FiveMTweak - FiveM GTA V utility tool for True Stretch and FPS tweaks"
 authors = ["LuckWW"]
 license = "MIT"
 edition = "2021"

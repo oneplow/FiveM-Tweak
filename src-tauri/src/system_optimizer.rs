@@ -92,17 +92,50 @@ pub fn purge_standby_list() -> Result<(), String> {
     }
 }
 
+use serde::Serialize;
+use sysinfo::{System, CpuRefreshKind, RefreshKind, Disks, MemoryRefreshKind};
+
+#[derive(Serialize)]
+pub struct SystemInfoData {
+    pub cpu: String,
+    pub ram_total: f64,
+    pub ram_avail: f64,
+    pub os: String,
+    pub storage_total: f64,
+}
+
 #[tauri::command]
-pub fn get_cpu_info() -> String {
-    use sysinfo::{System, CpuRefreshKind, RefreshKind};
+pub fn get_system_info() -> SystemInfoData {
     let mut sys = System::new_with_specifics(
-        RefreshKind::nothing().with_cpu(CpuRefreshKind::everything()),
+        RefreshKind::nothing()
+            .with_cpu(CpuRefreshKind::everything())
+            .with_memory(MemoryRefreshKind::everything()),
     );
     sys.refresh_cpu_all();
+    sys.refresh_memory();
     
-    if let Some(cpu) = sys.cpus().first() {
+    let cpu = if let Some(cpu) = sys.cpus().first() {
         cpu.brand().trim().to_string()
     } else {
         "Unknown CPU".to_string()
+    };
+    
+    let ram_total = sys.total_memory() as f64 / 1_073_741_824.0;
+    let ram_avail = sys.available_memory() as f64 / 1_073_741_824.0;
+    
+    let os = System::long_os_version().unwrap_or_else(|| "Unknown Windows Version".to_string());
+    
+    let disks = Disks::new_with_refreshed_list();
+    let mut storage_total = 0.0;
+    for disk in &disks {
+        storage_total += disk.total_space() as f64 / 1_073_741_824.0;
+    }
+
+    SystemInfoData {
+        cpu,
+        ram_total,
+        ram_avail,
+        os,
+        storage_total,
     }
 }

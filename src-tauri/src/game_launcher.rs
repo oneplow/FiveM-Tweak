@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::os::windows::process::CommandExt;
 use std::process::Command;
 use sysinfo::System;
@@ -104,7 +104,14 @@ pub async fn launch_game(
         return Ok(logs);
     }
 
-    // Step 3: Launch FiveM
+    // Step 3: Instant Game Booster (Clear Temp & Flush DNS)
+    logs.push("Running Instant Game Booster (Flushing DNS & Clearing Temp)...".to_string());
+    let _ = Command::new("cmd")
+        .args(["/c", "ipconfig /flushdns & del /q /f /s %TEMP%\\* >nul 2>&1"])
+        .creation_flags(0x08000000)
+        .output();
+
+    // Step 4: Launch FiveM
     logs.push("Starting FiveM...".to_string());
     Command::new("cmd")
         .args(["/c", "start", "", &fivem_exe])

@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "TweakFiveM",
+  "productName": "FiveMTweak",
   "version": "5.0.0",
-  "identifier": "com.luckww.tweakfivem",
+  "identifier": "com.luckww.fivemtweak",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,23 +12,20 @@
   "app": {
     "windows": [
       {
-        "title": "TweakFiveM",
-        "width": 1024,
-        "height": 768,
+        "title": "FiveMTweak",
+        "width": 1080,
+        "height": 740,
         "minWidth": 480,
         "minHeight": 700,
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
-        "transparent": false
+        "transparent": false,
+        "center": true
       }
     ],
     "security": {
       "csp": null
-    },
-    "trayIcon": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": false
     }
   },
   "bundle": {

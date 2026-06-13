@@ -29,7 +29,21 @@ pub struct AppConfig {
     pub auto_priority: bool,
     #[serde(default)]
     pub auto_affinity: bool,
+    #[serde(default)]
+    pub auto_nvidia_profile: bool,
+    #[serde(default = "default_lod")]
+    pub nvidia_lod_preset: String,
+    #[serde(default = "default_aa")]
+    pub nvidia_aa_preset: String,
+    #[serde(default = "default_tex_qual")]
+    pub nvidia_tex_quality: String,
+    #[serde(default = "default_neg_lod")]
+    pub nvidia_neg_lod: String,
 }
+
+fn default_aa() -> String { "off".to_string() }
+fn default_tex_qual() -> String { "quality".to_string() }
+fn default_neg_lod() -> String { "allow".to_string() }
 
 fn default_true() -> bool {
     true
@@ -37,6 +51,10 @@ fn default_true() -> bool {
 
 fn default_lang() -> String {
     "th".to_string()
+}
+
+fn default_lod() -> String {
+    "safe".to_string()
 }
 
 impl Default for AppConfig {
@@ -54,6 +72,11 @@ impl Default for AppConfig {
             auto_standby_cleaner: false,
             auto_priority: false,
             auto_affinity: false,
+            auto_nvidia_profile: false,
+            nvidia_lod_preset: "safe".to_string(),
+            nvidia_aa_preset: "off".to_string(),
+            nvidia_tex_quality: "quality".to_string(),
+            nvidia_neg_lod: "allow".to_string(),
         }
     }
 }
@@ -121,6 +144,8 @@ pub fn update_config_field(state: tauri::State<'_, ConfigState>, key: String, va
         "auto_standby_cleaner" => config.auto_standby_cleaner = value == "true",
         "auto_priority" => config.auto_priority = value == "true",
         "auto_affinity" => config.auto_affinity = value == "true",
+        "auto_nvidia_profile" => config.auto_nvidia_profile = value == "true",
+        "nvidia_lod_preset" => config.nvidia_lod_preset = value,
         _ => {}
     }
     save_config(&config);

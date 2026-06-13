@@ -13,6 +13,11 @@ export interface AppConfig {
   auto_standby_cleaner: boolean;
   auto_priority: boolean;
   auto_affinity: boolean;
+  auto_nvidia_profile: boolean;
+  nvidia_lod_preset: string;
+  nvidia_aa_preset: string;
+  nvidia_tex_quality: string;
+  nvidia_neg_lod: string;
 }
 
 export const getConfig = () => invoke<AppConfig>('get_config');
@@ -69,8 +74,8 @@ export const applyGraphicsPreset = (presetFile: string) =>
   invoke<[boolean, string]>('apply_graphics_preset', { presetFile });
 export const restoreGraphics = () => invoke<[boolean, string]>('restore_graphics');
 
-export const applyNvidiaProfile = (lodKey: string) =>
-  invoke<[boolean, string]>('apply_nvidia_profile', { lodKey });
+export const applyNvidiaProfile = (lodKey: string, aaKey: string, texQualKey: string, negLodKey: string) =>
+  invoke<[boolean, string]>('apply_nvidia_profile', { lodKey, aaKey, texQualKey, negLodKey });
 
 export async function setTimerResolution(enable: boolean) {
   try {
@@ -81,6 +86,18 @@ export async function setTimerResolution(enable: boolean) {
   }
 }
 
+export interface SystemInfoData {
+  cpu: string;
+  ram_total: number;
+  ram_avail: number;
+  os: string;
+  storage_total: number;
+}
+
+export async function getSystemInfo(): Promise<SystemInfoData> {
+  return invoke('get_system_info');
+}
+
 export async function purgeStandbyList() {
   try {
     await invoke<void>('purge_standby_list');
@@ -89,3 +106,53 @@ export async function purgeStandbyList() {
     return { success: false, message: String(error) };
   }
 }
+
+// ═══════════════════════════════════════════════
+//  NETWORK & POWER & GAMING
+// ═══════════════════════════════════════════════
+
+export const applyNetworkTweaks = () =>
+  invoke<[boolean, string]>('apply_network_tweaks');
+
+export const restoreNetworkTweaks = () =>
+  invoke<[boolean, string]>('restore_network_tweaks');
+
+export const setPowerPlan = (mode: string) =>
+  invoke<[boolean, string]>('set_power_plan', { mode });
+
+export const getActivePowerPlan = () =>
+  invoke<string>('get_active_power_plan');
+
+export const getWindowsGamingFeatures = () =>
+  invoke<[boolean, boolean]>('get_windows_gaming_features');
+
+export const setGameMode = (enabled: boolean) =>
+  invoke<[boolean, string]>('set_game_mode', { enabled });
+
+export const setHags = (enabled: boolean) =>
+  invoke<[boolean, string]>('set_hags', { enabled });
+
+// ═══════════════════════════════════════════════
+//  ADVANCED TWEAKS
+// ═══════════════════════════════════════════════
+
+export const toggleGameDvr = (enable: boolean) =>
+  invoke<[boolean, string]>('toggle_game_dvr', { enable });
+
+export const getGameDvrStatus = () =>
+  invoke<boolean>('get_game_dvr_status');
+
+export const disableFsoForFivem = (fivemPath: string) =>
+  invoke<[boolean, string]>('disable_fso_for_fivem', { fivemPath });
+
+export const toggleMouseAcceleration = (enable: boolean) =>
+  invoke<[boolean, string]>('toggle_mouse_acceleration', { enable });
+
+export const getMouseAccelerationStatus = () =>
+  invoke<boolean>('get_mouse_acceleration_status');
+
+export const toggleCoreParking = (unpark: boolean) =>
+  invoke<[boolean, string]>('toggle_core_parking', { unpark });
+
+export const launchMsiUtility = () =>
+  invoke<[boolean, string]>('launch_msi_utility');
