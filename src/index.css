@@ -6,29 +6,27 @@
   --sidebar-w: 72px;
   --bottombar-h: 56px;
   
-  --bg-deep: #09090b;
-  --bg-surface: #18181b;
-  --bg-surface-hover: #27272a;
+  --bg-deep: #111114;
+  --bg-surface: rgba(24, 24, 27, 0.65);
+  --bg-surface-hover: rgba(39, 39, 42, 0.75);
   
   --text-primary: #f4f4f5;
   --text-secondary: #a1a1aa;
-  --border-subtle: #27272a;
   --text-muted: #71717a;
-  --border-subtle: #27272a;
+  --border-subtle: rgba(255,255,255,0.08);
   --toggle-bg: #3f3f46;
   --accent: #10b981;
   --accent-hover: #059669;
 }
 
 :root[data-theme="light"] {
-  --bg-deep: #fafafa;
-  --bg-surface: #ffffff;
-  --bg-surface-hover: #f4f4f5;
+  --bg-deep: #f4f4f5;
+  --bg-surface: rgba(255, 255, 255, 0.75);
+  --bg-surface-hover: rgba(244, 244, 245, 0.85);
   
   --text-primary: #09090b;
   --text-secondary: #71717a;
   --text-muted: #a1a1aa;
-  --border-subtle: #e4e4e7;
   --border-subtle: #e4e4e7;
   --toggle-bg: #d4d4d8;
 }
@@ -75,6 +73,8 @@ body {
   justify-content: space-between;
   padding: 0 24px;
   background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
   z-index: 10;
 }
@@ -98,6 +98,8 @@ body {
   gap: 16px;
   padding-top: 24px;
   background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-right: 1px solid var(--border-subtle);
   z-index: 5;
 }
@@ -138,6 +140,8 @@ body {
 .app-bottom {
   grid-area: bottom;
   background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border-subtle);
   padding: 0 24px;
   display: flex;
@@ -158,6 +162,8 @@ body {
 
 .glass-card {
   background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
 }
@@ -290,6 +296,8 @@ input:checked + .toggle-slider:before {
   top: calc(100% + 4px);
   right: 0;
   background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 4px;
@@ -363,3 +371,13 @@ input:checked + .toggle-slider:before {
 .toggle input {
   display: none;
 }
+
+.apply-log-box {
+  background: #18181b;
+  border: 1px solid rgba(63, 63, 70, 0.5);
+}
+
+:root[data-theme="light"] .apply-log-box {
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+}

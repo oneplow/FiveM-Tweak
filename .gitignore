@@ -27,3 +27,4 @@ dist-ssr
 recovered_clean.tsx
 recovered.tsx
 target
+.base.tsx

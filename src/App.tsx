@@ -128,6 +128,14 @@ export default function App() {
   const [hags, setHags] = useState(false);
   const [gameDvrDisabled, setGameDvrDisabled] = useState(false);
   const [mouseAccelDisabled, setMouseAccelDisabled] = useState(false);
+  const [coreParkingUnparked, setCoreParkingUnparked] = useState(false);
+  const [networkOptimized, setNetworkOptimized] = useState(false);
+
+  // Batch Apply State
+  const [isApplying, setIsApplying] = useState(false);
+  const [applyProgress, setApplyProgress] = useState(0);
+  const [applyTotal, setApplyTotal] = useState(0);
+  const [applyLogs, setApplyLogs] = useState<{msg: string, isError: boolean}[]>([]);
 
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -224,6 +232,93 @@ export default function App() {
     catch (error) { addLog(`${t(lang, 'error')}: ${String(error)}`); }
   };
 
+  const handleApplyAll = async () => {
+    setIsApplying(true);
+    setApplyLogs([]);
+    let completed = 0;
+    const total = 11;
+    setApplyTotal(total);
+
+    const logApply = (msg: string, isError = false) => {
+      setApplyLogs(prev => [...prev, {msg, isError}]);
+    };
+
+    // Auto Settings (Timer, Standby, Priority, Affinity)
+    logApply('Saving auto configurations...');
+    await updateConfigField('auto_timer_resolution', String(autoTimer));
+    await updateConfigField('auto_standby_cleaner', String(autoStandby));
+    await updateConfigField('auto_priority', String(autoPriority));
+    await updateConfigField('auto_affinity', String(autoAffinity));
+    completed += 4;
+    setApplyProgress(completed);
+
+    // Power Plan
+    logApply('Applying Power Plan...');
+    try {
+      const [ok, msg] = await setPowerPlanCmd(powerPlan);
+      logApply(msg, !ok);
+    } catch (e) { logApply(String(e), true); }
+    completed++; setApplyProgress(completed);
+
+    // Game Mode
+    logApply('Applying Windows Game Mode...');
+    try {
+      const [ok, msg] = await setGameModeCmd(gameMode);
+      logApply(msg, !ok);
+    } catch (e) { logApply(String(e), true); }
+    completed++; setApplyProgress(completed);
+
+    // HAGS
+    logApply('Applying HAGS...');
+    try {
+      const [ok, msg] = await setHagsCmd(hags);
+      logApply(msg, !ok);
+    } catch (e) { logApply(String(e), true); }
+    completed++; setApplyProgress(completed);
+
+    // Game DVR
+    logApply('Applying Game DVR setting...');
+    try {
+      const [ok, msg] = await toggleGameDvr(!gameDvrDisabled);
+      logApply(msg, !ok);
+    } catch (e) { logApply(String(e), true); }
+    completed++; setApplyProgress(completed);
+
+    // Mouse Accel
+    logApply('Applying Mouse Acceleration...');
+    try {
+      const { toggleMouseAcceleration } = await import('./lib/commands');
+      const [ok, msg] = await toggleMouseAcceleration(!mouseAccelDisabled);
+      logApply(msg, !ok);
+    } catch (e) { logApply(String(e), true); }
+    completed++; setApplyProgress(completed);
+
+    // Core Parking
+    logApply('Applying Core Parking...');
+    try {
+      const { toggleCoreParking } = await import('./lib/commands');
+      const [ok, msg] = await toggleCoreParking(coreParkingUnparked);
+      logApply(msg, !ok);
+    } catch (e) { logApply(String(e), true); }
+    completed++; setApplyProgress(completed);
+
+    // Network
+    logApply('Applying Network Optimizations...');
+    try {
+      const { applyNetworkTweaks, restoreNetworkTweaks } = await import('./lib/commands');
+      if (networkOptimized) {
+        const [ok, msg] = await applyNetworkTweaks();
+        logApply(msg, !ok);
+      } else {
+        const [ok, msg] = await restoreNetworkTweaks();
+        logApply(msg, !ok);
+      }
+    } catch (e) { logApply(String(e), true); }
+    completed++; setApplyProgress(completed);
+
+    logApply('All changes applied successfully!');
+  };
+
   if (!config) return null;
   const hasNvidiaGpu = gpuInfo?.nvidia || gpuCategory === 'NVIDIA' || gpuCategory === 'nvidia_only' || gpuCategory === 'hybrid';
   const isNvidiaDisabled = !hasNvidiaGpu;
@@ -238,6 +333,12 @@ export default function App() {
           <span className="app-version">v1.1</span>
         </div>
         <div className="app-topbar-right">
+          <button
+            className="btn-primary border-none px-4 py-1.5 text-xs font-bold shadow-lg shadow-emerald-500/20 mr-2 animate-pulse"
+            onClick={handleApplyAll}
+          >
+            {lang === 'th' ? 'บันทึกค่าระบบ' : 'Save System Tweaks'}
+          </button>
           <button className="btn-secondary px-3 py-1.5 text-xs font-semibold flex items-center gap-2" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title={t(lang, 'themeMode')}>
             {theme === 'dark' ? (
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-400">
@@ -357,10 +458,10 @@ export default function App() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <ToggleRow title={t(lang, 'timerTitle')} description={t(lang, 'timerDesc')} risk={t(lang, 'riskNoneConfig')} checked={autoTimer} onChange={(v) => { setAutoTimer(v); void updateConfigField('auto_timer_resolution', String(v)); addLog(lang === 'th' ? (v ? '✓ เปิดใช้ Auto Timer 0.5ms' : '✗ ปิด Auto Timer 0.5ms') : (v ? '✓ Auto Timer 0.5ms Enabled' : '✗ Auto Timer 0.5ms Disabled')); }} />
-                <ToggleRow title={t(lang, 'standbyTitle')} description={t(lang, 'standbyDesc')} risk={t(lang, 'riskNoneConfig')} checked={autoStandby} onChange={(v) => { setAutoStandby(v); void updateConfigField('auto_standby_cleaner', String(v)); addLog(lang === 'th' ? (v ? '✓ เปิดใช้ล้าง Standby Memory อัตโนมัติ' : '✗ ปิดล้าง Standby Memory อัตโนมัติ') : (v ? '✓ Auto Standby Memory Enabled' : '✗ Auto Standby Memory Disabled')); }} />
-                <ToggleRow title={t(lang, 'priorityTitle')} description={t(lang, 'priorityDesc')} risk={t(lang, 'riskNoneConfig')} checked={autoPriority} onChange={(v) => { setAutoPriority(v); void updateConfigField('auto_priority', String(v)); addLog(lang === 'th' ? (v ? '✓ เปิดบังคับ High Priority อัตโนมัติ' : '✗ ปิดบังคับ High Priority อัตโนมัติ') : (v ? '✓ Auto High Priority Enabled' : '✗ Auto High Priority Disabled')); }} />
-                <ToggleRow title={t(lang, 'affinityTitle')} description={t(lang, 'affinityDesc')} risk={t(lang, 'riskNoneConfig')} checked={autoAffinity} onChange={(v) => { setAutoAffinity(v); void updateConfigField('auto_affinity', String(v)); addLog(lang === 'th' ? (v ? '✓ เปิดปรับ CPU Affinity อัตโนมัติ' : '✗ ปิดปรับ CPU Affinity อัตโนมัติ') : (v ? '✓ Auto CPU Affinity Enabled' : '✗ Auto CPU Affinity Disabled')); }} />
+                <ToggleRow title={t(lang, 'timerTitle')} description={t(lang, 'timerDesc')} risk={t(lang, 'riskNoneConfig')} checked={autoTimer} onChange={setAutoTimer} />
+                <ToggleRow title={t(lang, 'standbyTitle')} description={t(lang, 'standbyDesc')} risk={t(lang, 'riskNoneConfig')} checked={autoStandby} onChange={setAutoStandby} />
+                <ToggleRow title={t(lang, 'priorityTitle')} description={t(lang, 'priorityDesc')} risk={t(lang, 'riskNoneConfig')} checked={autoPriority} onChange={setAutoPriority} />
+                <ToggleRow title={t(lang, 'affinityTitle')} description={t(lang, 'affinityDesc')} risk={t(lang, 'riskNoneConfig')} checked={autoAffinity} onChange={setAutoAffinity} />
               </div>
 
               <div className="glass-card p-5 flex flex-col gap-4">
@@ -369,22 +470,8 @@ export default function App() {
                   <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{t(lang, 'powerPlanDesc')} (Current: <span className="text-amber-400">{powerPlan}</span>)</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <button className="btn-primary border-none flex-1 py-2 px-3 text-xs font-semibold" onClick={async () => {
-                    addLog(t(lang, 'logPowerPlan'));
-                    try {
-                      const [ok, msg] = await setPowerPlanCmd('ultimate');
-                      addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                      if (ok) setPowerPlan(await getActivePowerPlan());
-                    } catch (e) { addLog(`✗ ${String(e)}`); }
-                  }}>{t(lang, 'powerPlanUltimate')}</button>
-                  <button className="btn-secondary flex-1 py-2 px-3 text-xs font-semibold" onClick={async () => {
-                    addLog(t(lang, 'logPowerPlan'));
-                    try {
-                      const [ok, msg] = await setPowerPlanCmd('balanced');
-                      addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                      if (ok) setPowerPlan(await getActivePowerPlan());
-                    } catch (e) { addLog(`✗ ${String(e)}`); }
-                  }}>{t(lang, 'powerPlanBalanced')}</button>
+                  <button className={`flex-1 py-2 px-3 text-xs font-semibold ${powerPlan.toLowerCase().includes('ultimate') ? 'btn-primary border-none' : 'btn-secondary'}`} onClick={() => setPowerPlan('ultimate')}>{t(lang, 'powerPlanUltimate')}</button>
+                  <button className={`flex-1 py-2 px-3 text-xs font-semibold ${powerPlan.toLowerCase().includes('balanced') ? 'btn-primary border-none' : 'btn-secondary'}`} onClick={() => setPowerPlan('balanced')}>{t(lang, 'powerPlanBalanced')}</button>
                 </div>
               </div>
 
@@ -395,15 +482,7 @@ export default function App() {
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{t(lang, 'gameModeDesc')}</p>
                   </div>
                   <label className="toggle">
-                    <input type="checkbox" className="hidden" checked={gameMode} onChange={async (e) => {
-                      const val = e.target.checked;
-                      addLog(t(lang, 'logGameMode'));
-                      try {
-                        const [ok, msg] = await setGameModeCmd(val);
-                        addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                        if (ok) setGameMode(val);
-                      } catch (err) { addLog(`✗ ${String(err)}`); }
-                    }} />
+                    <input type="checkbox" className="hidden" checked={gameMode} onChange={(e) => setGameMode(e.target.checked)} />
                     <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${gameMode ? 'bg-[var(--accent)]' : 'bg-[var(--toggle-bg)]'}`}>
                       <div className={`w-4 h-4 rounded-full bg-white transition-transform ${gameMode ? 'translate-x-4' : 'translate-x-0'}`} />
                     </div>
@@ -415,15 +494,7 @@ export default function App() {
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{t(lang, 'hagsDesc')}</p>
                   </div>
                   <label className="toggle">
-                    <input type="checkbox" className="hidden" checked={hags} onChange={async (e) => {
-                      const val = e.target.checked;
-                      addLog(t(lang, 'logHags'));
-                      try {
-                        const [ok, msg] = await setHagsCmd(val);
-                        addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                        if (ok) setHags(val);
-                      } catch (err) { addLog(`✗ ${String(err)}`); }
-                    }} />
+                    <input type="checkbox" className="hidden" checked={hags} onChange={(e) => setHags(e.target.checked)} />
                     <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${hags ? 'bg-[var(--accent)]' : 'bg-[var(--toggle-bg)]'}`}>
                       <div className={`w-4 h-4 rounded-full bg-white transition-transform ${hags ? 'translate-x-4' : 'translate-x-0'}`} />
                     </div>
@@ -439,22 +510,15 @@ export default function App() {
 
                 <div className="flex items-center justify-between border-t border-zinc-700/30 pt-4">
                   <div className="flex-1 pr-4">
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{lang === 'th' ? 'ปิด Game DVR' : 'Game DVR'}</h3>
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{lang === 'th' ? 'Game DVR' : 'Game DVR'}</h3>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{lang === 'th' ? 'ปิดระบบบันทึกวิดีโอเพื่อลดการกินทรัพยากร' : 'Disable Windows game recording'}</p>
                   </div>
-                  <button
-                    className={`text-xs font-semibold px-4 py-2 rounded-lg transition-colors ${!gameDvrDisabled ? 'btn-primary border-none' : 'btn-secondary'}`}
-                    onClick={async () => {
-                      addLog(lang === 'th' ? 'ตั้งค่า Game DVR...' : 'Setting Game DVR...');
-                      try {
-                        const [ok, msg] = await toggleGameDvr(!gameDvrDisabled);
-                        addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                        if (ok) setGameDvrDisabled(!gameDvrDisabled);
-                      } catch (e) { addLog(`✗ ${String(e)}`); }
-                    }}
-                  >
-                    {gameDvrDisabled ? (lang === 'th' ? 'เปิด Game DVR' : 'Enable DVR') : (lang === 'th' ? 'ปิด Game DVR' : 'Disable DVR')}
-                  </button>
+                  <label className="toggle">
+                    <input type="checkbox" className="hidden" checked={gameDvrDisabled} onChange={(e) => setGameDvrDisabled(e.target.checked)} />
+                    <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${gameDvrDisabled ? 'bg-[var(--accent)]' : 'bg-[var(--toggle-bg)]'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${gameDvrDisabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </div>
+                  </label>
                 </div>
 
                 <div className="flex items-center justify-between border-t border-zinc-700/30 pt-4">
@@ -463,17 +527,7 @@ export default function App() {
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{t(lang, 'mouseAccelDesc')}</p>
                   </div>
                   <label className="toggle">
-                    <input type="checkbox" className="hidden" checked={mouseAccelDisabled} onChange={async (e) => {
-                      const val = e.target.checked;
-                      addLog(t(lang, 'logToggle'));
-                      try {
-                        import('./lib/commands').then(async ({ toggleMouseAcceleration }) => {
-                          const [ok, msg] = await toggleMouseAcceleration(!val); // false to disable
-                          addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                          if (ok) setMouseAccelDisabled(val);
-                        });
-                      } catch (err) { addLog(`✗ ${String(err)}`); }
-                    }} />
+                    <input type="checkbox" className="hidden" checked={mouseAccelDisabled} onChange={(e) => setMouseAccelDisabled(e.target.checked)} />
                     <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${mouseAccelDisabled ? 'bg-[var(--accent)]' : 'bg-[var(--toggle-bg)]'}`}>
                       <div className={`w-4 h-4 rounded-full bg-white transition-transform ${mouseAccelDisabled ? 'translate-x-4' : 'translate-x-0'}`} />
                     </div>
@@ -485,26 +539,12 @@ export default function App() {
                     <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t(lang, 'coreParkingTitle')}</h3>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{t(lang, 'coreParkingDesc')}</p>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button className="btn-primary border-none flex-1 py-2 px-3 text-xs font-semibold" onClick={async () => {
-                      addLog(t(lang, 'logToggle'));
-                      try {
-                        import('./lib/commands').then(async ({ toggleCoreParking }) => {
-                          const [ok, msg] = await toggleCoreParking(true);
-                          addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                        });
-                      } catch (e) { addLog(`✗ ${String(e)}`); }
-                    }}>{lang === 'th' ? 'Unpark Cores' : 'Unpark Cores'}</button>
-                    <button className="btn-secondary flex-1 py-2 px-3 text-xs font-semibold" onClick={async () => {
-                      addLog(t(lang, 'logToggle'));
-                      try {
-                        import('./lib/commands').then(async ({ toggleCoreParking }) => {
-                          const [ok, msg] = await toggleCoreParking(false);
-                          addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                        });
-                      } catch (e) { addLog(`✗ ${String(e)}`); }
-                    }}>{lang === 'th' ? 'Restore' : 'Restore'}</button>
-                  </div>
+                  <label className="toggle">
+                    <input type="checkbox" className="hidden" checked={coreParkingUnparked} onChange={(e) => setCoreParkingUnparked(e.target.checked)} />
+                    <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${coreParkingUnparked ? 'bg-[var(--accent)]' : 'bg-[var(--toggle-bg)]'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${coreParkingUnparked ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </div>
+                  </label>
                 </div>
 
                 <div className="flex items-center justify-between border-t border-zinc-700/30 pt-4">
@@ -512,26 +552,12 @@ export default function App() {
                     <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t(lang, 'networkTitle')}</h3>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{t(lang, 'networkDesc')}</p>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button className="btn-primary border-none flex-1 py-2 px-3 text-xs font-semibold" onClick={async () => {
-                      addLog(t(lang, 'logNetworkApplying'));
-                      try {
-                        import('./lib/commands').then(async ({ applyNetworkTweaks }) => {
-                          const [ok, msg] = await applyNetworkTweaks();
-                          addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                        });
-                      } catch (e) { addLog(`✗ ${String(e)}`); }
-                    }}>{t(lang, 'applyNetwork')}</button>
-                    <button className="btn-secondary flex-1 py-2 px-3 text-xs font-semibold" onClick={async () => {
-                      addLog(t(lang, 'logNetworkRestoring'));
-                      try {
-                        import('./lib/commands').then(async ({ restoreNetworkTweaks }) => {
-                          const [ok, msg] = await restoreNetworkTweaks();
-                          addLog(ok ? `✓ ${msg}` : `✗ ${msg}`);
-                        });
-                      } catch (e) { addLog(`✗ ${String(e)}`); }
-                    }}>{t(lang, 'restoreNetwork')}</button>
-                  </div>
+                  <label className="toggle">
+                    <input type="checkbox" className="hidden" checked={networkOptimized} onChange={(e) => setNetworkOptimized(e.target.checked)} />
+                    <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${networkOptimized ? 'bg-[var(--accent)]' : 'bg-[var(--toggle-bg)]'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${networkOptimized ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </div>
+                  </label>
                 </div>
 
                 <div className="flex items-center justify-between border-t border-zinc-700/30 pt-4">
@@ -796,6 +822,82 @@ export default function App() {
                   </>
                 )}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Loading Modal */}
+      <AnimatePresence>
+        {isApplying && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 modal-backdrop"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="modal-panel w-full max-w-md p-6 flex flex-col gap-6 relative overflow-hidden"
+            >
+              <div className="text-center space-y-2 relative z-10">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse" style={{ background: 'rgba(16, 185, 129, 0.2)', color: 'var(--accent)' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2v4"></path>
+                    <path d="M12 18v4"></path>
+                    <path d="M4.93 4.93l2.83 2.83"></path>
+                    <path d="M16.24 16.24l2.83 2.83"></path>
+                    <path d="M2 12h4"></path>
+                    <path d="M18 12h4"></path>
+                    <path d="M4.93 19.07l2.83-2.83"></path>
+                    <path d="M16.24 7.76l2.83-2.83"></path>
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{lang === 'th' ? 'กำลังปรับแต่งระบบ...' : 'Optimizing System...'}</h2>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {lang === 'th' ? 'กรุณารอสักครู่ ระบบกำลังปรับตั้งค่าต่างๆ ตามที่คุณเลือก' : 'Please wait, applying your selected settings...'}
+                </p>
+              </div>
+
+              <div className="space-y-2 relative z-10">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span style={{ color: 'var(--text-primary)' }}>Progress</span>
+                  <span style={{ color: 'var(--accent)' }}>{applyProgress} / {applyTotal}</span>
+                </div>
+                <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-hover)' }}>
+                  <motion.div
+                    className="h-full"
+                    style={{ background: 'var(--accent)' }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${applyTotal > 0 ? (applyProgress / applyTotal) * 100 : 0}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </div>
+
+              <div className="apply-log-box rounded-lg p-3 h-40 overflow-y-auto relative z-10 font-mono text-[11px] flex flex-col gap-1">
+                {applyLogs.map((log, i) => (
+                  <div key={i} className={log.isError ? 'text-rose-400' : 'text-emerald-400'}>
+                    {log.isError ? '✗' : '✓'} {log.msg}
+                  </div>
+                ))}
+                {applyProgress === applyTotal && applyTotal > 0 && (
+                  <div className="mt-2 pt-2 font-bold text-center" style={{ color: 'var(--text-primary)', borderTop: '1px solid var(--border-subtle)' }}>
+                    {lang === 'th' ? 'ปรับแต่งระบบเสร็จสมบูรณ์!' : 'Optimization Complete!'}
+                  </div>
+                )}
+              </div>
+              
+              {applyProgress === applyTotal && applyTotal > 0 && (
+                <button
+                  className="btn-primary border-none w-full py-2 text-sm font-bold relative z-10"
+                  onClick={() => setIsApplying(false)}
+                >
+                  {lang === 'th' ? 'ปิดหน้าต่าง' : 'Close'}
+                </button>
+              )}
             </motion.div>
           </motion.div>
         )}

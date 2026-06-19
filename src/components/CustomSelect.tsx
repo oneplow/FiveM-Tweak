@@ -72,7 +72,7 @@ export function CustomSelect({ value, onChange, options, disabled }: CustomSelec
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute z-50 w-full mt-2 left-0 right-0 rounded-xl shadow-xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+            className="absolute z-50 w-full mt-2 left-0 right-0 rounded-xl shadow-xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface)] backdrop-blur-xl"
             style={{
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
             }}
